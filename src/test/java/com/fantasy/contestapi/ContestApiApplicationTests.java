@@ -1,13 +1,9 @@
-package com.fantasy.contestapi.contestapi;
+package com.fantasy.contestapi;
 
 import org.junit.jupiter.api.Test;
+import org.springframework.boot.autoconfigure.SpringBootApplication;
 import org.springframework.boot.test.context.SpringBootTest;
 
-@SpringBootTest
+@SpringBootApplication
 class ContestApiApplicationTests {
-
-	@Test
-	void contextLoads() {
-	}
-
 }
