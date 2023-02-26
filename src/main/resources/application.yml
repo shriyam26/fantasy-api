@@ -1,0 +1,23 @@
+server:
+  port: 8080
+  servlet:
+    context-path: /contest-api
+  max-http-header-size: 32768
+spring:
+  application:
+    name: contest-api
+  jpa:
+    database: MYSQL
+    show-sql: false
+    hibernate:
+      ddl-auto: none
+  datasource:
+    driver-class-name: com.mysql.cj.jdbc.Driver
+    url: jdbc:mysql://localhost:3306/dream11fantasy?createDatabaseIfNotExist=true
+    username: fantasy
+    password: fantasy
+logging:
+  level:
+    root: info
+  pattern:
+    console: "%d{yyyy-MM-dd HH:mm:ss} [%thread] %-5level %logger{36} - %msg%n"
