@@ -1,4 +1,4 @@
-package com.fantasy.contestapi.Controller;
+package com.fantasy.contestapi.controller;
 
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
@@ -6,7 +6,7 @@ import org.springframework.web.bind.annotation.RestController;
 @RestController
 public class DemoController {
     @RequestMapping(value = "hello")
-    public String hello(){
+    public String hello() {
         return "Spring boot Gradle Example";
     }
 }
