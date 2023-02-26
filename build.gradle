@@ -2,6 +2,7 @@ plugins {
     id 'java'
     id 'org.springframework.boot' version '2.5.8'
     id 'io.spring.dependency-management' version '1.1.0'
+    id 'org.liquibase.gradle' version '2.0.4'
 }
 
 group = 'com.fantasy.contest-api'
@@ -24,7 +25,8 @@ dependencies {
     implementation 'org.springframework.boot:spring-boot-starter-web'
     implementation 'org.springframework.boot:spring-boot-starter-data-jpa'
     runtimeOnly 'com.h2database:h2'
-    implementation 'mysql:mysql-connector-java:8.0.28'
+    liquibaseRuntime 'mysql:mysql-connector-java:8.0.30'
+    liquibaseRuntime 'org.liquibase:liquibase-core:4.14.0'
 
     compileOnly 'org.projectlombok:lombok'
     annotationProcessor 'org.projectlombok:lombok'
@@ -33,4 +35,121 @@ dependencies {
 
 tasks.named('test') {
     useJUnitPlatform()
+}
+
+ext.configureProjectProperties = {
+    if (project.hasProperty('env')) {
+        def localProperties = new Properties()
+        localProperties.load(new FileInputStream("$projectDir/src/main/resources/liquibase/conf/${env}.properties"))
+        localProperties.each { prop -> project.ext.set(prop.key, prop.value) }
+    }
+}
+ext.configureLiquibase = { profile, changeLogFileSuffix ->
+    ext.configureProjectProperties()
+    ext.mergeProfile(profile)
+    liquibase {
+        activities {
+            def changeLogFileName = "build/resources/main/liquibase/changelogs/${profile}/exim${changeLogFileSuffix}.xml"
+
+            "exim" {
+                println "Configuring Liquibase for exim changeLogFile: ${changeLogFileName}"
+                changeLogFile "${changeLogFileName}"
+                driver "${project.ext.driver}"
+                url "${project.ext.url}/exim?useSSL=false&createDatabaseIfNotExist=true"
+                username "${project.ext.username}"
+                password "${project.ext.password}"
+                changeSetAuthor "base (Generated)"
+                project.mkdir "${projectDir}/src/main/resources/liquibase/changelogs/${profile}/"
+                logLevel 'debug'
+                changeLogParameters([profile: "${profile}"])
+            }
+        }
+    }
+}
+ext.mergeProfile = { profile ->
+    def profileList = []
+    def oldValue = ""
+    profile.split("-").each {
+        profileList << oldValue + it
+        oldValue = oldValue + it + "-"
+    }
+    println "$profileList"
+    profileList.each { src ->
+        copyProfile("${projectDir}/src/main/resources/liquibase/changelogs/" + src, "$projectDir/build/resources/main/liquibase/changelogs/$profile")
+    }
+}
+
+ext.copyProfile = { srcProfile, targetProfile ->
+    copy {
+        from srcProfile
+        into targetProfile
+        println "Copying profile $srcProfile to $targetProfile"
+    }
+}
+//gradlew createEmptySchemaChangeSetFile -Penv=local -Pfile=MW-12345-issue-description
+task createEmptySchemaChangeSetFile {
+    doLast {
+        project.ext.createEmptyChangeSet('schema', 'schemas', project.findProperty('file'))
+    }
+}
+//gradlew createEmptyDataChangeSetFile -Penv=local -Pfile=MW-12345-issue-description -Pprofile=core
+task createEmptyDataChangeSetFile {
+    doLast {
+        project.ext.createEmptyChangeSet('data', "${profile}", project.findProperty('file'))
+    }
+}
+ext.createEmptyChangeSet = { changeType, profile, newFileName ->
+    project.ext.configureProjectProperties()
+    def fileName = project.findProperty('file') ?: 'new_changeset_file'
+    println "Creating - ${projectDir}/src/main/resources/liquibase/changelogs/${profile}/${fileName}.xml"
+    def uuid = UUID.randomUUID().toString()
+    new File("${projectDir}/src/main/resources/liquibase/changelogs/${profile}/${fileName}.xml").text = """<?xml version="1.1" encoding="UTF-8" standalone="no"?>
+<databaseChangeLog logicalFilePath="${profile}/${fileName}.xml"
+                   xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
+                   xmlns:ext="http://www.liquibase.org/xml/ns/dbchangelog-ext"
+                   xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+                   xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog-ext http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-ext.xsd http://www.liquibase.org/xml/ns/dbchangelog http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-latest.xsd">
+    <changeSet id="${uuid}" author="${System.properties['user.name']}" failOnError="true" runOnChange="true" >
+        <!--
+        <addColumn tableName="tablename">
+            <column name="columnname" type="varchar(255)"/>
+        </addColumn>
+        -->
+        
+        <!--
+        
+        <createTable tableName="tablename">
+            <column autoIncrement="true" name="pkcolumnname" type="BIGINT">
+                <constraints primaryKey="true"/>
+            </column>
+            <column name="fieldname" type="VARCHAR(255)"/>
+
+            <column name="fieldname2" type="BIGINT">
+                <constraints nullable="false"/>
+            </column>
+            
+            <column name="created_by" type="VARCHAR(255)"/>
+            <column name="created_date" type="datetime"/>
+            <column name="last_modified_by" type="VARCHAR(255)"/>
+            <column name="last_modified_date" type="datetime"/>
+            <column name="channel" type="VARCHAR(255)"/>
+            <column name="transaction_id" type="VARCHAR(255)"/>
+        </createTable>
+        
+        -->        
+    </changeSet>  
+</databaseChangeLog>"""
+    ant.replace(file: "${projectDir}/src/main/resources/liquibase/changelogs/${profile}/exim_${changeType}_changelog_master.xml", token: "</databaseChangeLog>", value: "<include file=\"${fileName}.xml\" relativeToChangelogFile=\"true\"/>\n</databaseChangeLog>")
+}
+//gradlew updateSchemas update -Penv=local
+task updateSchemas {
+    doFirst {
+        project.ext.configureLiquibase('schemas', '_schema_changelog_master')
+    }
+}
+//gradlew updateMasterData update -Penv=local -Pprofile=core
+task updateMasterData {
+    doFirst {
+        project.ext.configureLiquibase("${profile}", '_master_data')
+    }
 }
