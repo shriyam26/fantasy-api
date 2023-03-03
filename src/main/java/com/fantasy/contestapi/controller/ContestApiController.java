@@ -1,6 +1,6 @@
 package com.fantasy.contestapi.controller;
 
-import com.fantasy.contestapi.schemaobject.PlayerPointsSo;
+import com.fantasy.contestapi.schemaobject.SaveContestSo;
 import com.fantasy.contestapi.service.SaveContestService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -14,7 +14,7 @@ public class ContestApiController implements ContestApi {
     private final SaveContestService saveContestService;
 
     @Override
-    public void saveContest(PlayerPointsSo playerPointsSo) {
-        saveContestService.saveContainer(playerPointsSo);
+    public void saveContest(SaveContestSo saveContestSo) {
+        saveContestService.saveContainer(saveContestSo);
     }
 }

@@ -1,8 +1,8 @@
 package com.fantasy.contestapi.service;
 
-import com.fantasy.contestapi.schemaobject.PlayerPointsSo;
+import com.fantasy.contestapi.schemaobject.SaveContestSo;
 
 public interface SaveContestService {
 
-    void saveContainer(PlayerPointsSo playerPointsSo);
+    void saveContainer(SaveContestSo saveContestSo);
 }

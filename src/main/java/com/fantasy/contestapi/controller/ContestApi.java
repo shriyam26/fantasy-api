@@ -1,6 +1,6 @@
 package com.fantasy.contestapi.controller;
 
-import com.fantasy.contestapi.schemaobject.PlayerPointsSo;
+import com.fantasy.contestapi.schemaobject.SaveContestSo;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import io.swagger.v3.oas.annotations.tags.Tag;
@@ -14,5 +14,5 @@ public interface ContestApi {
     @ApiResponse(responseCode = "200", description = "Saved successfully")
     @ApiResponse(responseCode = "400", description = "Bad input parameter")
     @PostMapping(produces = {"application/json"})
-    void saveContest(PlayerPointsSo playerPointsSo);
+    void saveContest(SaveContestSo saveContestSo);
 }
