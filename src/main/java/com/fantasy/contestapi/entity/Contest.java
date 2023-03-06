@@ -5,6 +5,7 @@ import lombok.Setter;
 import lombok.ToString;
 
 import javax.persistence.*;
+import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -17,6 +18,8 @@ public class Contest {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
     private String winnerCount;
+    private LocalDateTime matchTime;
+    private String contestValue;
 
     @ToString.Exclude
     @ManyToOne(fetch = FetchType.LAZY)
@@ -29,5 +32,5 @@ public class Contest {
     private Team awayTeam;
 
     @OneToMany(cascade = CascadeType.ALL, orphanRemoval = true, mappedBy = "contest", fetch = FetchType.LAZY)
-    private List<Result> contestTransactionHistoryList = new ArrayList<>();
+    private List<Result> results = new ArrayList<>();
 }

@@ -21,3 +21,26 @@ logging:
     root: info
   pattern:
     console: "%d{yyyy-MM-dd HH:mm:ss} [%thread] %-5level %logger{36} - %msg%n"
+contest:
+  ipl:
+    participationFee: 40
+    winnerCount1: 1
+      winPercentageShare: 100
+    winnerCount2: 2
+      winPercentageShare1: 70
+      winPercentageShare2: 30
+    winnerCount3: 3
+      winPercentageShare1: 50
+      winPercentageShare2: 30
+      winPercentageShare3: 20
+    winnerCount4: 4
+      winPercentageShare1: 40
+      winPercentageShare2: 25
+      winPercentageShare3: 20
+      winPercentageShare4: 15
+    winnerCount5: 5
+      winPercentageShare1: 40
+      winPercentageShare2: 23
+      winPercentageShare3: 15
+      winPercentageShare4: 11
+      winPercentageShare5: 11

@@ -14,8 +14,8 @@ public class Result {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
-    private String position;
     private String points;
+    private String amountEarned;
 
     @ToString.Exclude
     @ManyToOne(fetch = FetchType.LAZY)
