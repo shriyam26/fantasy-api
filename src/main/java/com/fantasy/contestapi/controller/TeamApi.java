@@ -1,6 +1,6 @@
 package com.fantasy.contestapi.controller;
 
-import com.fantasy.contestapi.schemaobject.SaveContestSo;
+import com.fantasy.contestapi.schemaobject.SaveTeamSo;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
@@ -10,13 +10,15 @@ import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 
 import javax.validation.Valid;
+import java.util.List;
 
-@Tag(name = "Contest")
-@RequestMapping("/contest")
-public interface ContestApi {
-    @Operation(summary = "Save Contest Info", description = "Save Contest Details")
+@Tag(name = "Team")
+@RequestMapping("/team")
+public interface TeamApi {
+
+    @Operation(summary = "Save Team Info", description = "Save Team Details")
     @ApiResponse(responseCode = "200", description = "Saved successfully")
     @ApiResponse(responseCode = "400", description = "Bad input parameter")
     @PostMapping(produces = {"application/json"})
-    void saveContest(@Parameter(name = "Save Contest Information", required = true) @Valid @RequestBody SaveContestSo saveContestSo);
+    void saveTeam(@Parameter(name = "Search Team Details", required = true) @Valid @RequestBody List<SaveTeamSo> saveTeamSoList);
 }

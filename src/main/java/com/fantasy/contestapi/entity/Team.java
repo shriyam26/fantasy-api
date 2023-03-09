@@ -17,11 +17,14 @@ public class Team {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
     private String teamName;
-    private String points;
-    private String wins;
-    private String loss;
-    private String noResult;
-    private String netRunRate;
+    private Long matches = 0L;
+    private Long points = 0L;
+    private Long wins = 0L;
+    private Long loss = 0L;
+    private Long noResult = 0L;
+    private Double netRunRate = 0.000;
+    private Long previousSeasonWins = 0L;
+    private Long previousSeasonPoints = 0L;
 
     @OneToMany(cascade = CascadeType.ALL, orphanRemoval = true, mappedBy = "homeTeam", fetch = FetchType.LAZY)
     private List<Contest> homeTeamContests = new ArrayList<>();

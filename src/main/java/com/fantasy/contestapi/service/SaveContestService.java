@@ -4,5 +4,5 @@ import com.fantasy.contestapi.schemaobject.SaveContestSo;
 
 public interface SaveContestService {
 
-    void saveContainer(SaveContestSo saveContestSo);
+    void saveContest(SaveContestSo saveContestSo);
 }
