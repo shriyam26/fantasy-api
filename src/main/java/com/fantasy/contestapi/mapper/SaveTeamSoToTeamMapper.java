@@ -4,14 +4,15 @@ import com.fantasy.contestapi.entity.Team;
 import com.fantasy.contestapi.schemaobject.SaveTeamSo;
 import lombok.AccessLevel;
 import lombok.NoArgsConstructor;
-import org.springframework.beans.BeanUtils;
 
 @NoArgsConstructor(access = AccessLevel.PRIVATE)
-public class SaveTeamSoToTeam {
+public class SaveTeamSoToTeamMapper {
 
     public static Team map(SaveTeamSo saveTeamSo) {
         Team team = new Team();
-        BeanUtils.copyProperties(saveTeamSo, team);
+        team.setTeamName(saveTeamSo.getTeamName());
+        team.setPreviousSeasonPoints(saveTeamSo.getPreviousSeasonPoints());
+        team.setPreviousSeasonWins(saveTeamSo.getPreviousSeasonWins());
         return team;
     }
 }

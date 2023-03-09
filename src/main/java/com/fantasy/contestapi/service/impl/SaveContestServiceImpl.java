@@ -13,6 +13,7 @@ import com.fantasy.contestapi.schemaobject.SaveContestSo;
 import com.fantasy.contestapi.service.SaveContestService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.apache.commons.lang3.StringUtils;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 
@@ -24,63 +25,100 @@ import java.util.stream.Collectors;
 @Slf4j
 public class SaveContestServiceImpl implements SaveContestService {
 
-    @Value("${contest.ipl.participationFee:}")
-    private final Long participationFee;
     private final TeamRepository teamRepository;
     private final PlayerRepository playerRepository;
     private final ContestRepository contestRepository;
     private final ResultRepository resultRepository;
+
+    @Value("${contest.ipl.participationFee:}")
+    private Long participationFee;
+    @Value("${contest.ipl.winnerCount1.winPercentageShare:}")
+    private Long oneWinnerAmount;
+    @Value("${contest.ipl.winnerCount2.winPercentageShare1:}")
+    private Long twoWinnerAmount1;
+    @Value("${contest.ipl.winnerCount2.winPercentageShare2:}")
+    private Long twoWinnerAmount2;
+    @Value("${contest.ipl.winnerCount3.winPercentageShare1:}")
+    private Long threeWinnerAmount1;
+    @Value("${contest.ipl.winnerCount3.winPercentageShare2:}")
+    private Long threeWinnerAmount2;
+    @Value("${contest.ipl.winnerCount3.winPercentageShare3:}")
+    private Long threeWinnerAmount3;
+    @Value("${contest.ipl.winnerCount4.winPercentageShare1:}")
+    private Long fourWinnerAmount1;
+    @Value("${contest.ipl.winnerCount4.winPercentageShare2:}")
+    private Long fourWinnerAmount2;
+    @Value("${contest.ipl.winnerCount4.winPercentageShare3:}")
+    private Long fourWinnerAmount3;
+    @Value("${contest.ipl.winnerCount4.winPercentageShare4:}")
+    private Long fourWinnerAmount4;
+    @Value("${contest.ipl.winnerCount5.winPercentageShare1:}")
+    private Long fiveWinnerAmount1;
+    @Value("${contest.ipl.winnerCount5.winPercentageShare2:}")
+    private Long fiveWinnerAmount2;
+    @Value("${contest.ipl.winnerCount5.winPercentageShare3:}")
+    private Long fiveWinnerAmount3;
+    @Value("${contest.ipl.winnerCount5.winPercentageShare4:}")
+    private Long fiveWinnerAmount4;
+    @Value("${contest.ipl.winnerCount5.winPercentageShare5:}")
+    private Long fiveWinnerAmount5;
 
     @Override
     public void saveContest(SaveContestSo saveContestSo) {
         List<Team> teamList = updateTeamScore(saveContestSo.getHomeTeamId(), saveContestSo.getAwayTeamId(), saveContestSo.getWinnerId());
 
         saveContestSo.getPlayerPointsSoList().sort(Comparator.comparing(PlayerPointsSo::getPoints, Comparator.reverseOrder()));
-        List<String> playerIds = saveContestSo.getPlayerPointsSoList().stream().map(PlayerPointsSo::getPlayerId).collect(Collectors.toList());
+        List<Long> playerIds = saveContestSo.getPlayerPointsSoList().stream().map(PlayerPointsSo::getPlayerId).collect(Collectors.toList());
         List<Player> playerList = playerRepository.findByIdIn(playerIds);
-        Map<String, PlayerPointsSo> playerPointsSoMap = new HashMap<>();
+        Map<Long, PlayerPointsSo> playerPointsSoMap = new HashMap<>();
         saveContestSo.getPlayerPointsSoList().forEach(playerPointsSo -> playerPointsSoMap.put(playerPointsSo.getPlayerId(), playerPointsSo));
 
-        Map<String, Player> playerMap = new HashMap<>();
-        playerList.forEach(player -> playerMap.put(String.valueOf(player.getId()), player));
+        Map<Long, Player> playerMap = new HashMap<>();
+        playerList.forEach(player -> playerMap.put(player.getId(), player));
 
-        Long participantCount = playerPointsSoMap.values().stream().filter(playerPointsSo -> "0".equalsIgnoreCase(playerPointsSo.getPoints())).count();
+        Long participantCount = playerPointsSoMap.values().stream().filter(playerPointsSo -> StringUtils.isNotBlank(playerPointsSo.getPoints())).count();
         Long contestNetAmount = getContestNetAmount(participantCount);
+        Long winnerCount = getWinnerCount(participantCount);
+        List<Double> winAmountList = getWinAmount(winnerCount, contestNetAmount);
+        Map<Long, PlayerPointsSo> playerPointsSoSortedMap = getPlayerPointsSortedMap(playerPointsSoMap, winnerCount);
+        log.info("Participant count: {} and contest amount: {}", participantCount, contestNetAmount);
 
         Contest contest = new Contest();
-        contest.setHomeTeam(teamList.stream().filter(team -> saveContestSo.getHomeTeamId().equalsIgnoreCase(String.valueOf(team.getId()))).findFirst().orElse(null));
-        contest.setAwayTeam(teamList.stream().filter(team -> saveContestSo.getAwayTeamId().equalsIgnoreCase(String.valueOf(team.getId()))).findFirst().orElse(null));
+        contest.setHomeTeam(teamList.stream().filter(team -> Objects.equals(saveContestSo.getHomeTeamId(), team.getId())).findFirst().orElse(null));
+        contest.setAwayTeam(teamList.stream().filter(team -> Objects.equals(saveContestSo.getAwayTeamId(), team.getId())).findFirst().orElse(null));
         contest.setMatchTime(saveContestSo.getMatchTime());
-        contest.setWinnerCount(String.valueOf(getWinnerCount(participantCount)));
-        contest.setContestValue(String.valueOf(participantCount * participationFee));
+        contest.setWinnerCount(String.valueOf(winnerCount));
+        contest.setContestValue(String.valueOf(contestNetAmount));
         contestRepository.save(contest);
 
         List<Result> resultList = new ArrayList<>();
         List<Player> playerUpdatedList = new ArrayList<>();
         saveContestSo.getPlayerPointsSoList().forEach(playerPointsSo -> {
-            Player player = playerMap.get(playerPointsSo.getPlayerId());
+            Long playerId = playerPointsSo.getPlayerId();
+            Player player = playerMap.get(playerId);
             Result result = new Result();
             result.setContest(contest);
             result.setPlayer(player);
             result.setPoints(playerPointsSo.getPoints());
-            setPlayerAndResultAmount(player, result, playerPointsSoMap, getWinnerCount(participantCount), contestNetAmount);
+            setPlayerPoints(playerPointsSoMap, playerId, player);
+            setPlayerAndResultAmount(player, result, playerPointsSoSortedMap, winAmountList, playerId);
             resultList.add(result);
             playerUpdatedList.add(player);
         });
         resultRepository.saveAll(resultList);
         playerRepository.saveAll(playerUpdatedList);
-        log.info("Method reached.");
+        log.info("Data updated successfully for contest: {}", contest.getId());
     }
 
-    public List<Team> updateTeamScore(String homeTeamId, String awayTeamId, String winnerId) {
+    public List<Team> updateTeamScore(Long homeTeamId, Long awayTeamId, Long winnerId) {
         //Think no result case and nrr case.
         List<Team> teamList = teamRepository.findByIdIn(Arrays.asList(homeTeamId, awayTeamId));
-        teamList.stream().filter(team -> winnerId.equalsIgnoreCase(String.valueOf(team.getId()))).forEach(team -> {
+        teamList.stream().filter(team -> winnerId.equals(team.getId())).forEach(team -> {
             team.setMatches(team.getMatches() + 1);
-            team.setPoints(team.getPoints() + 1);
+            team.setPoints(team.getPoints() + 3);
             team.setWins(team.getWins() + 1);
         });
-        teamList.stream().filter(team -> !winnerId.equalsIgnoreCase(String.valueOf(team.getId()))).forEach(team -> {
+        teamList.stream().filter(team -> !winnerId.equals(team.getId())).forEach(team -> {
             team.setMatches(team.getMatches() + 1);
             team.setLoss(team.getLoss() + 1);
         });
@@ -88,62 +126,84 @@ public class SaveContestServiceImpl implements SaveContestService {
         return teamList;
     }
 
-    public void setPlayerAndResultAmount(Player player, Result result, Map<String, PlayerPointsSo> playerPointsSoMap, Long winnerCount, Long contestNetAmount) {
+    private void setPlayerPoints(Map<Long, PlayerPointsSo> playerPointsSoMap, Long playerId, Player player) {
+        double currentTotalPoints = StringUtils.isNotBlank(player.getTotalPoints()) ? Double.parseDouble(player.getTotalPoints()) : 0.0;
+        player.setTotalPoints(String.valueOf(currentTotalPoints + Double.parseDouble(playerPointsSoMap.get(playerId).getPoints())));
+        log.info("Points earned by player: {} is: {}", player.getPlayerName(), playerPointsSoMap.get(playerId).getPoints());
+    }
+
+    public void setPlayerAndResultAmount(
+            Player player,
+            Result result,
+            Map<Long, PlayerPointsSo> playerPointsSoSortedMap,
+            List<Double> winnerAmountList, Long playerId
+    ) {
+        if (playerPointsSoSortedMap.entrySet().iterator().next().getKey().equals(player.getId())) {
+            long wins = StringUtils.isNotBlank(player.getWins()) ? Long.parseLong(player.getWins()) : 0;
+            player.setWins(String.valueOf(wins + 1));
+        }
+
+        List<Long> playerPointsSoSortedList = new ArrayList<>(playerPointsSoSortedMap.keySet());
+        int index = playerPointsSoSortedList.indexOf(playerId);
+        double currentAmount = StringUtils.isNotBlank(player.getNetAmount()) ? Double.parseDouble(player.getNetAmount()) : 0.0;
+        if (index < 0) {
+            player.setNetAmount(String.valueOf(currentAmount));
+            result.setAmountEarned("0");
+            log.info("Amount earned by player: {} is: {}", player.getPlayerName(), 0);
+        } else {
+            player.setNetAmount(String.valueOf(currentAmount + winnerAmountList.get(index)));
+            result.setAmountEarned(String.valueOf(winnerAmountList.get(index)));
+            log.info("Amount earned by player: {} is: {}", player.getPlayerName(), winnerAmountList.get(index));
+        }
+    }
+
+    private Map<Long, PlayerPointsSo> getPlayerPointsSortedMap(Map<Long, PlayerPointsSo> playerPointsSoMap, Long winnerCount) {
         // we first get a Stream of the entries in the map using entrySet().stream(). We then use the sorted() method to sort the entries based
         // on the playerPoints value of the PlayerPointsSo object. Finally, we use the collect() method to collect the sorted entries into a new
         // LinkedHashMap, which preserves the order of insertion.
-        Map<String, PlayerPointsSo> playerPointsSoSortedMap = playerPointsSoMap.entrySet().stream()
-                .limit(winnerCount)
+        return playerPointsSoMap.entrySet().stream()
                 .sorted(Map.Entry.comparingByValue(Comparator.comparing(PlayerPointsSo::getPoints).reversed()))
+                .limit(winnerCount)
                 .collect(Collectors.toMap(
                         Map.Entry::getKey,
                         Map.Entry::getValue,
                         (oldValue, newValue) -> oldValue, // If there are duplicate keys, keep the old value
                         LinkedHashMap::new
                 ));
-        player.setTotalPoints(player.getTotalPoints() + playerPointsSoSortedMap.get(String.valueOf(player.getId())).getPoints());
-        if (playerPointsSoSortedMap.entrySet().iterator().next().getKey().equalsIgnoreCase(String.valueOf(player.getId()))) {
-            player.setWins(player.getWins() + 1);
-        }
-        List<String> winAmountList = getWinAmount(winnerCount, contestNetAmount);
-        List<String> playerPointsSoSortedList = new ArrayList<>(playerPointsSoMap.keySet());
-        int index = playerPointsSoSortedList.indexOf(String.valueOf(player.getId()));
-        player.setNetAmount(player.getNetAmount() + winAmountList.get(index));
-        result.setAmountEarned(winAmountList.get(index));
     }
 
-    public List<String> getWinAmount(Long winnerCount, Long contestNetAmount) {
-        List<String> winAmount = new ArrayList<>();
+    private List<Double> getWinAmount(Long winnerCount, Long contestNetAmount) {
+        List<Double> winAmount = new ArrayList<>();
         if (winnerCount == 1) {
-            winAmount.add(String.valueOf(contestNetAmount));
+            winAmount.add((((double) oneWinnerAmount * (double) contestNetAmount) / 100));
         } else if (winnerCount == 2) {
-            winAmount.add(String.valueOf(0.7 * contestNetAmount));
-            winAmount.add(String.valueOf(0.3 * contestNetAmount));
+            winAmount.add((((double) twoWinnerAmount1 * (double) contestNetAmount) / 100));
+            winAmount.add((((double) twoWinnerAmount2 * (double) contestNetAmount) / 100));
         } else if (winnerCount == 3) {
-            winAmount.add(String.valueOf(0.5 * contestNetAmount));
-            winAmount.add(String.valueOf(0.3 * contestNetAmount));
-            winAmount.add(String.valueOf(0.2 * contestNetAmount));
+            winAmount.add((((double) threeWinnerAmount1 * (double) contestNetAmount) / 100));
+            winAmount.add((((double) threeWinnerAmount2 * (double) contestNetAmount) / 100));
+            winAmount.add((((double) threeWinnerAmount3 * (double) contestNetAmount) / 100));
         } else if (winnerCount == 4) {
-            winAmount.add(String.valueOf(0.4 * contestNetAmount));
-            winAmount.add(String.valueOf(0.25 * contestNetAmount));
-            winAmount.add(String.valueOf(0.2 * contestNetAmount));
-            winAmount.add(String.valueOf(0.15 * contestNetAmount));
+            winAmount.add((((double) fourWinnerAmount1 * (double) contestNetAmount) / 100));
+            winAmount.add((((double) fourWinnerAmount2 * (double) contestNetAmount) / 100));
+            winAmount.add((((double) fourWinnerAmount3 * (double) contestNetAmount) / 100));
+            winAmount.add((((double) fourWinnerAmount4 * (double) contestNetAmount) / 100));
         } else if (winnerCount == 5) {
-            winAmount.add(String.valueOf(0.47 * contestNetAmount));
-            winAmount.add(String.valueOf(0.23 * contestNetAmount));
-            winAmount.add(String.valueOf(0.15 * contestNetAmount));
-            winAmount.add(String.valueOf(0.11 * contestNetAmount));
-            winAmount.add(String.valueOf(0.11 * contestNetAmount));
+            winAmount.add((((double) fiveWinnerAmount1 * (double) contestNetAmount) / 100));
+            winAmount.add((((double) fiveWinnerAmount2 * (double) contestNetAmount) / 100));
+            winAmount.add((((double) fiveWinnerAmount3 * (double) contestNetAmount) / 100));
+            winAmount.add((((double) fiveWinnerAmount4 * (double) contestNetAmount) / 100));
+            winAmount.add((((double) fiveWinnerAmount5 * (double) contestNetAmount) / 100));
         }
         winAmount.sort(Collections.reverseOrder());
         return winAmount;
     }
 
-    public Long getContestNetAmount(Long particpantCount) {
-        return 90 * (particpantCount * participationFee) / 100;
+    private Long getContestNetAmount(Long participantCount) {
+        return 90 * (participantCount * participationFee) / 100;
     }
 
-    public Long getWinnerCount(Long participationCount) {
-        return participationCount % 4;
+    private Long getWinnerCount(Long participantCount) {
+        return participantCount / 2;
     }
 }

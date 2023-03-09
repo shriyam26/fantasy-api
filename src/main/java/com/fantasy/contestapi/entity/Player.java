@@ -19,6 +19,9 @@ public class Player {
     private String totalPoints;
     private String wins;
     private String netAmount;
+    private Long previousSeasonWins;
+    private Long previousSeasonPoints;
+    private Long previousSeasonAmount;
 
     @OneToMany(cascade = CascadeType.ALL, orphanRemoval = true, mappedBy = "player", fetch = FetchType.LAZY)
     private List<Result> results = new ArrayList<>();

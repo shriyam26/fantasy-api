@@ -15,6 +15,6 @@ public class ContestApiController implements ContestApi {
 
     @Override
     public void saveContest(SaveContestSo saveContestSo) {
-        saveContestService.saveContainer(saveContestSo);
+        saveContestService.saveContest(saveContestSo);
     }
 }

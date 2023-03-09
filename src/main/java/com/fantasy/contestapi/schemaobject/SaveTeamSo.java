@@ -6,4 +6,6 @@ import lombok.Data;
 public class SaveTeamSo {
 
     private String teamName;
+    private Long previousSeasonWins;
+    private Long previousSeasonPoints;
 }

@@ -4,6 +4,6 @@ import lombok.Data;
 
 @Data
 public class PlayerPointsSo {
-    private String playerId;
+    private Long playerId;
     private String points;
 }
