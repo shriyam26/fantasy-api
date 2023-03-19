@@ -20,6 +20,9 @@ public class Contest {
     private String winnerCount;
     private LocalDateTime matchTime;
     private String contestValue;
+    
+    @Version
+    private Long version;
 
     @ToString.Exclude
     @ManyToOne(fetch = FetchType.LAZY)

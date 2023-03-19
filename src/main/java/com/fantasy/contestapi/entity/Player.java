@@ -16,6 +16,8 @@ public class Player {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
     private String playerName;
+    private String email;
+    private String password;
     private String totalPoints;
     private String wins;
     private String netAmount;

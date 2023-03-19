@@ -1,10 +1,12 @@
 package com.fantasy.contestapi.service.impl;
 
+import com.fantasy.contestapi.constant.ErrorMessages;
 import com.fantasy.contestapi.entity.Team;
 import com.fantasy.contestapi.mapper.SaveTeamSoToTeamMapper;
 import com.fantasy.contestapi.repository.TeamRepository;
 import com.fantasy.contestapi.schemaobject.SaveTeamSo;
 import com.fantasy.contestapi.service.SaveTeamService;
+import com.fantasy.contestapi.validation.ContestException;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.lang3.StringUtils;
@@ -23,9 +25,7 @@ public class SaveTeamServiceImpl implements SaveTeamService {
     @Override
     public void saveTeamService(List<SaveTeamSo> saveTeamSoList) {
         if (saveTeamSoList.stream().anyMatch(saveTeamSo -> StringUtils.isBlank(saveTeamSo.getTeamName()))) {
-            //throw error here
-            log.error("Please send valid team name");
-            return;
+            throw new ContestException(ErrorMessages.ERR_PLAYER_INVALID.getCode(), ErrorMessages.ERR_PLAYER_INVALID.getMessage());
         }
         List<Team> teamList = new ArrayList<>();
         saveTeamSoList.forEach(saveTeamSo -> teamList.add(SaveTeamSoToTeamMapper.map(saveTeamSo)));

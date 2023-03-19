@@ -11,6 +11,7 @@ import com.fantasy.contestapi.repository.TeamRepository;
 import com.fantasy.contestapi.schemaobject.PlayerPointsSo;
 import com.fantasy.contestapi.schemaobject.SaveContestSo;
 import com.fantasy.contestapi.service.SaveContestService;
+import com.fantasy.contestapi.validation.ContestValidator;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.lang3.StringUtils;
@@ -29,6 +30,7 @@ public class SaveContestServiceImpl implements SaveContestService {
     private final PlayerRepository playerRepository;
     private final ContestRepository contestRepository;
     private final ResultRepository resultRepository;
+    private final ContestValidator contestValidator;
 
     @Value("${contest.ipl.participationFee:}")
     private Long participationFee;
@@ -65,6 +67,7 @@ public class SaveContestServiceImpl implements SaveContestService {
 
     @Override
     public void saveContest(SaveContestSo saveContestSo) {
+        contestValidator.validate(saveContestSo);
         List<Team> teamList = updateTeamScore(saveContestSo.getHomeTeamId(), saveContestSo.getAwayTeamId(), saveContestSo.getWinnerId());
 
         saveContestSo.getPlayerPointsSoList().sort(Comparator.comparing(PlayerPointsSo::getPoints, Comparator.reverseOrder()));
@@ -90,6 +93,7 @@ public class SaveContestServiceImpl implements SaveContestService {
         contest.setWinnerCount(String.valueOf(winnerCount));
         contest.setContestValue(String.valueOf(contestNetAmount));
         contestRepository.save(contest);
+        teamRepository.saveAll(teamList);
 
         List<Result> resultList = new ArrayList<>();
         List<Player> playerUpdatedList = new ArrayList<>();
@@ -113,16 +117,23 @@ public class SaveContestServiceImpl implements SaveContestService {
     public List<Team> updateTeamScore(Long homeTeamId, Long awayTeamId, Long winnerId) {
         //Think no result case and nrr case.
         List<Team> teamList = teamRepository.findByIdIn(Arrays.asList(homeTeamId, awayTeamId));
-        teamList.stream().filter(team -> winnerId.equals(team.getId())).forEach(team -> {
-            team.setMatches(team.getMatches() + 1);
-            team.setPoints(team.getPoints() + 3);
-            team.setWins(team.getWins() + 1);
-        });
-        teamList.stream().filter(team -> !winnerId.equals(team.getId())).forEach(team -> {
-            team.setMatches(team.getMatches() + 1);
-            team.setLoss(team.getLoss() + 1);
-        });
-        teamRepository.saveAll(teamList);
+        if (winnerId > 0) {
+            teamList.stream().filter(team -> winnerId.equals(team.getId())).forEach(team -> {
+                team.setMatches(team.getMatches() + 1);
+                team.setPoints(team.getPoints() + 3);
+                team.setWins(team.getWins() + 1);
+            });
+            teamList.stream().filter(team -> !winnerId.equals(team.getId())).forEach(team -> {
+                team.setMatches(team.getMatches() + 1);
+                team.setLoss(team.getLoss() + 1);
+            });
+        } else {
+            teamList.forEach(team -> {
+                team.setMatches(team.getMatches() + 1);
+                team.setPoints(team.getPoints() + 1);
+                team.setWins(team.getNoResult() + 1);
+            });
+        }
         return teamList;
     }
 
@@ -145,8 +156,10 @@ public class SaveContestServiceImpl implements SaveContestService {
 
         List<Long> playerPointsSoSortedList = new ArrayList<>(playerPointsSoSortedMap.keySet());
         int index = playerPointsSoSortedList.indexOf(playerId);
+        long position = (index + 1);
+        result.setPosition(position);
         double currentAmount = StringUtils.isNotBlank(player.getNetAmount()) ? Double.parseDouble(player.getNetAmount()) : 0.0;
-        if (index < 0) {
+        if (position > winnerAmountList.size()) {
             player.setNetAmount(String.valueOf(currentAmount));
             result.setAmountEarned("0");
             log.info("Amount earned by player: {} is: {}", player.getPlayerName(), 0);
@@ -157,13 +170,12 @@ public class SaveContestServiceImpl implements SaveContestService {
         }
     }
 
-    private Map<Long, PlayerPointsSo> getPlayerPointsSortedMap(Map<Long, PlayerPointsSo> playerPointsSoMap, Long winnerCount) {
+    private Map<Long, PlayerPointsSo> getPlayerPointsSortedMap(Map<Long, PlayerPointsSo> playerPointsSoMap) {
         // we first get a Stream of the entries in the map using entrySet().stream(). We then use the sorted() method to sort the entries based
         // on the playerPoints value of the PlayerPointsSo object. Finally, we use the collect() method to collect the sorted entries into a new
         // LinkedHashMap, which preserves the order of insertion.
         return playerPointsSoMap.entrySet().stream()
                 .sorted(Map.Entry.comparingByValue(Comparator.comparing(PlayerPointsSo::getPoints).reversed()))
-                .limit(winnerCount)
                 .collect(Collectors.toMap(
                         Map.Entry::getKey,
                         Map.Entry::getValue,

@@ -16,6 +16,7 @@ public class Result {
     private Long id;
     private String points;
     private String amountEarned;
+    private Long position;
 
     @ToString.Exclude
     @ManyToOne(fetch = FetchType.LAZY)

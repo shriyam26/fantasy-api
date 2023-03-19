@@ -1,5 +1,6 @@
 package com.fantasy.contestapi.controller;
 
+import com.fantasy.contestapi.schemaobject.AmendPlayerSo;
 import com.fantasy.contestapi.schemaobject.SavePlayerSo;
 import com.fantasy.contestapi.schemaobject.SearchPlayerResponseSo;
 import com.fantasy.contestapi.service.SavePlayerService;
@@ -27,5 +28,10 @@ public class PlayerApiController implements PlayerApi {
     @Override
     public ResponseEntity<List<SearchPlayerResponseSo>> getPlayerList() {
         return ResponseEntity.ok(searchPlayerService.getPlayerList());
+    }
+
+    @Override
+    public void updatePlayer(List<AmendPlayerSo> amendPlayerSoList) {
+        savePlayerService.updatePlayer(amendPlayerSoList);
     }
 }
