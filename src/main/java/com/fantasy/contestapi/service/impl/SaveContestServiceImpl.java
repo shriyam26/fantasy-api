@@ -83,7 +83,7 @@ public class SaveContestServiceImpl implements SaveContestService {
         Long contestNetAmount = getContestNetAmount(participantCount);
         Long winnerCount = getWinnerCount(participantCount);
         List<Double> winAmountList = getWinAmount(winnerCount, contestNetAmount);
-        Map<Long, PlayerPointsSo> playerPointsSoSortedMap = getPlayerPointsSortedMap(playerPointsSoMap, winnerCount);
+        Map<Long, PlayerPointsSo> playerPointsSoSortedMap = getPlayerPointsSortedMap(playerPointsSoMap);
         log.info("Participant count: {} and contest amount: {}", participantCount, contestNetAmount);
 
         Contest contest = new Contest();
